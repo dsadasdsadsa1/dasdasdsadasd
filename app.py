@@ -18,9 +18,9 @@ if st.button("Начать поиск"):
             st.error("Неверный формат имени пользователя.")
         else:
             with st.spinner("Идет сканирование... Это может занять около 1-2 минут."):
-                # Запуск утилиты через python -m sherlock_project
+                # Запускаем без "--txt", так как .txt файл создается по умолчанию
                 result = subprocess.run(
-                    [sys.executable, "-m", "sherlock_project", "--txt", "--timeout", "5", safe_username],
+                    [sys.executable, "-m", "sherlock_project", "--timeout", "5", safe_username],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True
