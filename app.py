@@ -18,26 +18,16 @@ if st.button("Начать расследование"):
             st.error("Неверный формат имени пользователя.")
         else:
             with st.spinner("Идет сканирование... Это может занять около 1-2 минут."):
-                # Отключаем рекурсию (--no-recursion и --no-extracting)
-                # Ограничиваем поиск до топ-250 популярных сайтов для скорости
+                # Насильно заставляем Maigret сохранять отчет в текущую директорию приложения через "-fo", "."
                 result = subprocess.run(
-                    ["maigret", "--html", "--no-recursion", "--no-extracting", "--top", "250", safe_username],
+                    ["maigret", "--html", "--no-recursion", "--no-extracting", "--top", "250", "-fo", ".", safe_username],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True
                 )
                 
-                # Умный поиск файла отчета во всех папках проекта (results, reports или корень)
-                report_path = None
-                expected_filename = f"report_{safe_username}.html"
-                
-                for root, dirs, files in os.walk("."):
-                    # Пропускаем скрытые и служебные папки для ускорения поиска
-                    if any(p in root for p in [".git", ".streamlit", "venv", "__pycache__"]):
-                        continue
-                    if expected_filename in files:
-                        report_path = os.path.join(root, expected_filename)
-                        break
+                # Имя файла отчета в текущей директории
+                report_path = f"report_{safe_username}.html"
                 
                 st.subheader("Результаты сканирования:")
                 
@@ -53,8 +43,8 @@ if st.button("Начать расследование"):
                     else:
                         st.info("По данному запросу совпадений не найдено.")
                 
-                # Если файл отчета был успешно найден на сервере
-                if report_path and os.path.exists(report_path):
+                # Если файл отчета был успешно сохранен и найден
+                if os.path.exists(report_path):
                     with open(report_path, "rb") as file:
                         st.download_button(
                             label="📥 Скачать полное HTML-досье",
@@ -67,9 +57,9 @@ if st.button("Начать расследование"):
                     except:
                         pass
                 else:
-                    st.warning("Файл HTML-отчета не был обнаружен. Возможно, утилите не удалось его сгенерировать.")
+                    st.warning("Файл HTML-отчета не был обнаружен в рабочей директории.")
                     if result.stderr:
-                        st.error("Технические логи ошибок:")
+                        st.error("Технические логи ошибок (stderr):")
                         st.code(result.stderr)
     else:
         st.warning("Пожалуйста, введите никнейм.")
