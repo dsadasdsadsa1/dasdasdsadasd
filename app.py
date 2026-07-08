@@ -5,7 +5,7 @@ import sys
 
 st.set_page_config(page_title="Maigret Web UI", page_icon="🕵️‍♂️")
 st.title("🕵️‍♂️ Maigret Web UI")
-st.write("Maigret — мощный инструмент OSINT. Поиск ведет строго по введенному никнейму.")
+st.write("Maigret — мощный инструмент OSINT. Поиск ведется строго по введенному никнейму.")
 
 username = st.text_input("Введите имя пользователя (username):")
 
@@ -17,7 +17,7 @@ if st.button("Начать расследование"):
         if not safe_username:
             st.error("Неверный формат имени пользователя.")
         else:
-            # 1. Перед запуском удаляем все старые отчеты, чтобы они не мешали
+            # 1. Перед запуском удаляем все старые отчеты
             for file in os.listdir("."):
                 if file.startswith("report_") and file.endswith(".html"):
                     try:
@@ -34,7 +34,7 @@ if st.button("Начать расследование"):
                     text=True
                 )
                 
-                # 2. Умный поиск: ищем любой файл, начинающийся на "report_" и заканчивающийся на ".html"
+                # 2. Умный поиск: ищем любой файл отчета
                 report_path = None
                 for file in os.listdir("."):
                     if file.startswith("report_") and file.endswith(".html"):
@@ -43,10 +43,17 @@ if st.button("Начать расследование"):
                 
                 st.subheader("Результаты сканирования:")
                 
-                # Выводим логи работы Maigret
+                # Выводим логи работы Maigret с жесткой фильтрацией системного мусора
                 if result.stdout:
                     lines = result.stdout.split('\n')
-                    found_lines = [line for line in lines if "[+]" in line or "Found" in line or "http" in line]
+                    found_lines = []
+                    for line in lines:
+                        line = line.strip()
+                        # Показываем только строки, которые начинаются на [+] и содержат веб-ссылку
+                        if line.startswith("[+]") and ("http://" in line or "https://" in line):
+                            # Исключаем служебные заголовки, донаты и информацию о базах данных
+                            if not any(keyword in line for keyword in ["MAIGRET", "database", "Patreon", "soxoj"]):
+                                found_lines.append(line)
                     
                     if found_lines:
                         st.success("Сканирование завершено!")
@@ -70,9 +77,6 @@ if st.button("Начать расследование"):
                         pass
                 else:
                     st.warning("Файл HTML-отчета не был обнаружен в рабочей директории.")
-                    # Выводим список файлов в папке для отладки
-                    st.write("Файлы в рабочей папке (для отладки):")
-                    st.code(str(os.listdir(".")))
                     if result.stderr:
                         st.error("Технические логи ошибок (stderr):")
                         st.code(result.stderr)
