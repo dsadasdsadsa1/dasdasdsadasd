@@ -5,7 +5,7 @@ import sys
 
 st.set_page_config(page_title="Maigret Web UI", page_icon="🕵️‍♂️")
 st.title("🕵️‍♂️ Maigret Web UI")
-st.write("Maigret — мощный инструмент OSINT. Поиск ведется строго по введенному никнейму.")
+st.write("Maigret — мощный инструмент OSINT. Поиск ведет строго по введенному никнейму.")
 
 username = st.text_input("Введите имя пользователя (username):")
 
@@ -17,8 +17,16 @@ if st.button("Начать расследование"):
         if not safe_username:
             st.error("Неверный формат имени пользователя.")
         else:
+            # 1. Перед запуском удаляем все старые отчеты, чтобы они не мешали
+            for file in os.listdir("."):
+                if file.startswith("report_") and file.endswith(".html"):
+                    try:
+                        os.remove(file)
+                    except:
+                        pass
+            
             with st.spinner("Идет сканирование... Это может занять около 1-2 минут."):
-                # Насильно заставляем Maigret сохранять отчет в текущую директорию приложения через "-fo", "."
+                # Запускаем Maigret с сохранением в текущую директорию
                 result = subprocess.run(
                     ["maigret", "--html", "--no-recursion", "--no-extracting", "--top", "250", "-fo", ".", safe_username],
                     stdout=subprocess.PIPE,
@@ -26,8 +34,12 @@ if st.button("Начать расследование"):
                     text=True
                 )
                 
-                # Имя файла отчета в текущей директории
-                report_path = f"report_{safe_username}.html"
+                # 2. Умный поиск: ищем любой файл, начинающийся на "report_" и заканчивающийся на ".html"
+                report_path = None
+                for file in os.listdir("."):
+                    if file.startswith("report_") and file.endswith(".html"):
+                        report_path = file
+                        break
                 
                 st.subheader("Результаты сканирования:")
                 
@@ -43,8 +55,8 @@ if st.button("Начать расследование"):
                     else:
                         st.info("По данному запросу совпадений не найдено.")
                 
-                # Если файл отчета был успешно сохранен и найден
-                if os.path.exists(report_path):
+                # Если файл отчета был обнаружен
+                if report_path and os.path.exists(report_path):
                     with open(report_path, "rb") as file:
                         st.download_button(
                             label="📥 Скачать полное HTML-досье",
@@ -58,6 +70,9 @@ if st.button("Начать расследование"):
                         pass
                 else:
                     st.warning("Файл HTML-отчета не был обнаружен в рабочей директории.")
+                    # Выводим список файлов в папке для отладки
+                    st.write("Файлы в рабочей папке (для отладки):")
+                    st.code(str(os.listdir(".")))
                     if result.stderr:
                         st.error("Технические логи ошибок (stderr):")
                         st.code(result.stderr)
