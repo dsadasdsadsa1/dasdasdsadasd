@@ -27,13 +27,17 @@ if st.button("Начать расследование"):
                     text=True
                 )
                 
-                # По умолчанию Maigret сохраняет отчеты в папку reports/ в текущей директории
-                report_dir = "reports"
-                html_filename = f"report_{safe_username}.html"
-                report_path = os.path.join(report_dir, html_filename)
+                # Умный поиск файла отчета во всех папках проекта (results, reports или корень)
+                report_path = None
+                expected_filename = f"report_{safe_username}.html"
                 
-                if not os.path.exists(report_path) and os.path.exists(html_filename):
-                    report_path = html_filename
+                for root, dirs, files in os.walk("."):
+                    # Пропускаем скрытые и служебные папки для ускорения поиска
+                    if any(p in root for p in [".git", ".streamlit", "venv", "__pycache__"]):
+                        continue
+                    if expected_filename in files:
+                        report_path = os.path.join(root, expected_filename)
+                        break
                 
                 st.subheader("Результаты сканирования:")
                 
@@ -49,8 +53,8 @@ if st.button("Начать расследование"):
                     else:
                         st.info("По данному запросу совпадений не найдено.")
                 
-                # Кнопка для скачивания интерактивного HTML-отчета
-                if os.path.exists(report_path):
+                # Если файл отчета был успешно найден на сервере
+                if report_path and os.path.exists(report_path):
                     with open(report_path, "rb") as file:
                         st.download_button(
                             label="📥 Скачать полное HTML-досье",
@@ -59,8 +63,13 @@ if st.button("Начать расследование"):
                             mime="text/html"
                         )
                     try:
-                        os.remove(report_path)
+                        os.remove(report_path) # Удаляем файл после скачивания
                     except:
                         pass
+                else:
+                    st.warning("Файл HTML-отчета не был обнаружен. Возможно, утилите не удалось его сгенерировать.")
+                    if result.stderr:
+                        st.error("Технические логи ошибок:")
+                        st.code(result.stderr)
     else:
         st.warning("Пожалуйста, введите никнейм.")
